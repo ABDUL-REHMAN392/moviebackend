@@ -15,6 +15,7 @@ const generateRefreshToken = (userId) => {
     { expiresIn: "7d" }, // 7 days
   );
 };
+
 // ============= USER REGISTRATION (Email/Password) =============
 export const registerUser = async (req, res) => {
   try {
@@ -82,6 +83,7 @@ export const registerUser = async (req, res) => {
     });
   }
 };
+
 // ============= USER LOGIN (Email/Password) =============
 export const loginUser = async (req, res) => {
   try {
@@ -104,6 +106,15 @@ export const loginUser = async (req, res) => {
         message: "Invalid credentials",
       });
     }
+
+    // Check if user registered with Google
+    if (user.authProvider === 'google') {
+      return res.status(400).json({
+        success: false,
+        message: 'Use Google login for this email address'
+      });
+    }
+
 
     // Compare password
     const isPasswordValid = await user.comparePassword(password);
@@ -152,6 +163,7 @@ export const loginUser = async (req, res) => {
     });
   }
 };
+
 // ============= GOOGLE OAUTH CALLBACK =============
 export const googleAuthCallback = async (req, res) => {
   try {
@@ -184,5 +196,47 @@ export const googleAuthCallback = async (req, res) => {
     console.error('Google auth error:', error);
     const clientUrl = process.env.CLIENT_URL.replace(/\/$/, '');
     res.redirect(`${clientUrl}/auth/failure`);
+  }
+};
+
+// ============= REFRESH ACCESS TOKEN =============
+export const refreshAccessToken = async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'Refresh token was not received'
+      });
+    }
+
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // Find user
+    const user = await User.findById(decoded.id).select('+refreshToken');
+    
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(403).json({
+        success: false,
+        message: 'Invalid refresh token'
+      });
+    }
+
+    // Generate new access token
+    const newAccessToken = generateAccessToken(user._id);
+
+    res.status(200).json({
+      success: true,
+      accessToken: newAccessToken
+    });
+
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(403).json({
+      success: false,
+      message: 'Invalid or expired refresh token'
+    });
   }
 };

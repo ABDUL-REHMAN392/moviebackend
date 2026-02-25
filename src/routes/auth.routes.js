@@ -3,6 +3,7 @@ import {
   registerUser,
   loginUser,
   googleAuthCallback,
+  refreshAccessToken
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
 const router = express.Router();
@@ -27,5 +28,6 @@ router.get(
   }),
   googleAuthCallback,
 );
-
+// Refresh Token
+router.post('/refresh-token', refreshAccessToken);
 export default router;
