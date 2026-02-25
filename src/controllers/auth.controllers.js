@@ -456,3 +456,42 @@ export const deleteProfilePicture = async (req, res) => {
     });
   }
 };
+
+// ============= DELETE USER ACCOUNT =============
+export const deleteUserAccount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User nahi mila'
+      });
+    }
+
+    // Cloudinary se profile picture delete karo
+    if (user.profilePicture.publicId) {
+      await cloudinary.uploader.destroy(user.profilePicture.publicId);
+    }
+
+    // User delete karo
+    await User.findByIdAndDelete(userId);
+
+    // Clear cookies
+    res.clearCookie('refreshToken');
+
+    res.status(200).json({
+      success: true,
+      message: 'Account successfully deleted'
+    });
+
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Account delete failed',
+      error: error.message
+    });
+  }
+};

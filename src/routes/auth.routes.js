@@ -7,7 +7,8 @@ import {
   getUserProfile,
   updateUserProfile,
   updateProfilePicture,
-  deleteProfilePicture
+  deleteProfilePicture,
+  deleteUserAccount
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
 import { authenticate } from '../middlewares/auth.middlewares.js';
@@ -49,4 +50,8 @@ router.put('/profile-picture',
   updateProfilePicture
 );
 router.delete('/profile-picture', authenticate, deleteProfilePicture);
+
+// Account Management
+router.delete('/account', authenticate, deleteUserAccount);
+
 export default router;
