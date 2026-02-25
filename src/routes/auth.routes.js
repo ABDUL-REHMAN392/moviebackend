@@ -5,10 +5,12 @@ import {
   googleAuthCallback,
   refreshAccessToken,
   getUserProfile,
-  updateUserProfile
+  updateUserProfile,
+  updateProfilePicture
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
 import { authenticate } from '../middlewares/auth.middlewares.js';
+import { upload } from '../middlewares/upload.middlewares.js' // Multer configuration
 const router = express.Router();
 
 // ============= PUBLIC ROUTES =============
@@ -38,4 +40,11 @@ router.post('/refresh-token', refreshAccessToken);
 // Profile Routes
 router.get('/profile', authenticate, getUserProfile);
 router.put('/profile', authenticate, updateUserProfile);
+
+// Profile Picture Routes
+router.put('/profile-picture', 
+  authenticate, 
+  upload.single('profilePicture'), 
+  updateProfilePicture
+);
 export default router;

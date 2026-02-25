@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import passport from './config/passport.configs.js';
 import userRoutes from './routes/auth.routes.js';
 import { mongoConnection } from './config/mongo.configs.js';
+import fs from 'fs';
 dotenv.config();
 
 const app = express();
@@ -20,6 +21,11 @@ app.use(cookieParser());
 
 // Passport initialization
 app.use(passport.initialize());
+
+// Create uploads folder if it doesn't exist
+if (!fs.existsSync('uploads')) {
+  fs.mkdirSync('uploads');
+}
 
 // ============= ROUTES =============
 app.use('/api/auth', userRoutes);
