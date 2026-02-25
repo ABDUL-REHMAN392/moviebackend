@@ -415,3 +415,44 @@ export const updateUserProfile = async (req, res) => {
     });
   }
 };
+
+// ============= DELETE PROFILE PICTURE =============
+export const deleteProfilePicture = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User nahi mila'
+      });
+    }
+
+    // Cloudinary se delete karo
+    if (user.profilePicture.publicId) {
+      await cloudinary.uploader.destroy(user.profilePicture.publicId);
+    }
+
+    // Set to default
+    user.profilePicture = {
+      publicId: null,
+      url: 'https://res.cloudinary.com/default/image/upload/v1234567890/default-avatar.png'
+    };
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete profile picture error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Profile picture delete failed',
+      error: error.message
+    });
+  }
+};

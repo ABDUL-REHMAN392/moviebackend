@@ -6,7 +6,8 @@ import {
   refreshAccessToken,
   getUserProfile,
   updateUserProfile,
-  updateProfilePicture
+  updateProfilePicture,
+  deleteProfilePicture
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
 import { authenticate } from '../middlewares/auth.middlewares.js';
@@ -47,4 +48,5 @@ router.put('/profile-picture',
   upload.single('profilePicture'), 
   updateProfilePicture
 );
+router.delete('/profile-picture', authenticate, deleteProfilePicture);
 export default router;
