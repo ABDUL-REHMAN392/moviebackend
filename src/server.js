@@ -29,8 +29,10 @@ if (!fs.existsSync('uploads')) {
 
 // ============= ROUTES =============
 app.use('/api/auth', userRoutes);
-
-
+//testing route
+app.get('/ping', (req, res) => {
+  res.send('pong');
+});
 // ============= DATABASE CONNECTION =============
 // Connect DB and Start Server
 (async () => {
