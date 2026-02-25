@@ -9,7 +9,7 @@ import fs from 'fs';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 // ============= MIDDLEWARES =============
 app.use(cors({
   origin: process.env.CLIENT_URL,
@@ -30,9 +30,7 @@ if (!fs.existsSync('uploads')) {
 // ============= ROUTES =============
 app.use('/api/auth', userRoutes);
 //testing route
-app.get('/ping', (req, res) => {
-  res.send('pong');
-});
+app.get('/ping', (req, res) => res.json({ message: 'pong' }));
 // ============= DATABASE CONNECTION =============
 // Connect DB and Start Server
 (async () => {
