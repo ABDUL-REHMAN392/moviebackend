@@ -152,3 +152,37 @@ export const loginUser = async (req, res) => {
     });
   }
 };
+// ============= GOOGLE OAUTH CALLBACK =============
+export const googleAuthCallback = async (req, res) => {
+  try {
+    const user = req.user;
+
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    user.refreshToken = refreshToken;
+    user.lastLogin = Date.now();
+    await user.save();
+    res.cookie('accessToken', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000 // 15 minutes
+    });
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000
+    });
+
+    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, ''); // trailing slash remove
+    const redirectUrl = `${clientUrl}/auth/success?token=${accessToken}`;
+    res.redirect(redirectUrl);
+
+  } catch (error) {
+    console.error('Google auth error:', error);
+    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, '');
+    res.redirect(`${clientUrl}/auth/failure`);
+  }
+};
