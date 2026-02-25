@@ -268,3 +268,150 @@ export const getUserProfile = async (req, res) => {
     });
   }
 };
+
+// ============= UPDATE USER PROFILE =============
+export const updateUserProfile = async (req, res) => {
+  try {
+    const { name, email } = req.body;
+    const userId = req.user.id;
+
+    // ✅ 1. Check if at least one field is provided
+    if (!name && !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one field (name or email) is required for update'
+      });
+    }
+
+    // ✅ 2. Validate name (if provided)
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name must be a valid string and cannot be empty'
+        });
+      }
+      if (name.trim().length < 2) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name must be at least 2 characters long'
+        });
+      }
+      if (name.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name cannot exceed 50 characters'
+        });
+      }
+    }
+
+    // ✅ 3. Validate email (if provided)
+    if (email !== undefined) {
+      if (typeof email !== 'string' || email.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email must be a valid string'
+        });
+      }
+      
+      // Email format validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid email format'
+        });
+      }
+    }
+
+    // ✅ 4. Find user
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // ✅ 5. Check if user is trying to update email with Google account
+    if (user.authProvider === 'google' && email && email !== user.email) {
+      return res.status(403).json({
+        success: false,
+        message: 'Cannot change email for Google authenticated accounts'
+      });
+    }
+
+    // ✅ 6. Track what's being updated
+    const updates = {};
+
+    // Update name
+    if (name && name.trim() !== user.name) {
+      user.name = name.trim();
+      updates.name = true;
+    }
+    
+    // Update email with duplicate check
+    if (email && email.trim().toLowerCase() !== user.email) {
+      const existingUser = await User.findOne({ 
+        email: email.trim().toLowerCase() 
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: 'This email is already associated with another account'
+        });
+      }
+      
+      user.email = email.trim().toLowerCase();
+      updates.email = true;
+    }
+
+    // ✅ 7. Check if anything actually changed
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No changes detected. Provided values are same as current values.'
+      });
+    }
+
+    // ✅ 8. Save updated user
+    await user.save();
+
+    // ✅ 9. Success response with updated fields info
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      updatedFields: Object.keys(updates),
+      user
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    
+    // ✅ Handle specific Mongoose errors
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation failed',
+        errors
+      });
+    }
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid user ID format'
+      });
+    }
+
+    // Generic error
+    res.status(500).json({
+      success: false,
+      message: 'Profile update failed',
+      error: error.message
+    });
+  }
+};

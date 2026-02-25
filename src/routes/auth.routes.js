@@ -4,7 +4,8 @@ import {
   loginUser,
   googleAuthCallback,
   refreshAccessToken,
-  getUserProfile
+  getUserProfile,
+  updateUserProfile
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
 import { authenticate } from '../middlewares/auth.middlewares.js';
@@ -36,5 +37,5 @@ router.post('/refresh-token', refreshAccessToken);
 // ============= PROTECTED ROUTES =============
 // Profile Routes
 router.get('/profile', authenticate, getUserProfile);
-
+router.put('/profile', authenticate, updateUserProfile);
 export default router;
