@@ -495,3 +495,30 @@ export const deleteUserAccount = async (req, res) => {
     });
   }
 };
+
+// ============= LOGOUT =============
+export const logoutUser = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Remove refresh token from database
+    await User.findByIdAndUpdate(userId, { refreshToken: null });
+
+    // Clear cookie
+     res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    res.status(200).json({
+      success: true,
+      message: 'Logout successful'
+    });
+
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Logout failed',
+      error: error.message
+    });
+  }
+};
