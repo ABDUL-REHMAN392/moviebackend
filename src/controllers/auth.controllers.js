@@ -1,5 +1,7 @@
 import { User } from "../models/users.models.js";
 import jwt from "jsonwebtoken";
+import cloudinary from '../config/cloudinary.configs.js'; // Cloudinary configuration file
+import fs from 'fs';
 // ============= JWT TOKEN GENERATION =============
 const generateAccessToken = (userId) => {
   return jwt.sign(

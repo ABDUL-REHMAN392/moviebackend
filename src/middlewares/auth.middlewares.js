@@ -1,7 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/users.models.js';
-import cloudinary from '../config/cloudinary.configs.js'; // Cloudinary configuration file
-import fs from 'fs';
 export const authenticate = async (req, res, next) => {
   try {
     let token;
