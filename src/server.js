@@ -1,9 +1,46 @@
-import express from "express";
-const app = express();
+import express from 'express';
+import dotenv from 'dotenv';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import userRoutes from './routes/auth.routes.js';
+import { mongoConnection } from './config/mongo.configs.js';
+dotenv.config();
 
-app.get("/", (req, res) => {
-  res.send("Hello World!");
+const app = express();
+const PORT = process.env.PORT || 5000;
+// ============= MIDDLEWARES =============
+app.use(cors({
+  origin: process.env.CLIENT_URL,
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// ============= ROUTES =============
+app.use('/api/auth', userRoutes);
+
+
+// ============= DATABASE CONNECTION =============
+// Connect DB and Start Server
+(async () => {
+  try {
+    await mongoConnection();
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+  }
+})();
+
+// ============= ERROR HANDLING =============
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Internal Server Error'
+  });
 });
-app.listen(3000, () => {
-  console.log("Server is running on port 3000");
-});
+
+export default app;
