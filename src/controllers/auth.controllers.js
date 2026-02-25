@@ -240,3 +240,31 @@ export const refreshAccessToken = async (req, res) => {
     });
   }
 };
+
+// ============= GET USER PROFILE =============
+export const getUserProfile = async (req, res) => {
+  try {
+    // req.user will be available through middleware (after authentication)
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      user
+    });
+
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Profile fetch failed',
+      error: error.message
+    });
+  }
+};

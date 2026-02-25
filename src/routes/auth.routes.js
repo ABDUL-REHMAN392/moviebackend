@@ -3,9 +3,11 @@ import {
   registerUser,
   loginUser,
   googleAuthCallback,
-  refreshAccessToken
+  refreshAccessToken,
+  getUserProfile
 } from "../controllers/auth.controllers.js";
 import passport from "passport";
+import { authenticate } from '../middlewares/auth.middlewares.js';
 const router = express.Router();
 
 // ============= PUBLIC ROUTES =============
@@ -30,4 +32,9 @@ router.get(
 );
 // Refresh Token
 router.post('/refresh-token', refreshAccessToken);
+
+// ============= PROTECTED ROUTES =============
+// Profile Routes
+router.get('/profile', authenticate, getUserProfile);
+
 export default router;
