@@ -37,7 +37,7 @@ app.use('/api/favorites', favoriteRoutes);
 (async () => {
   try {
     await mongoConnection();
-    app.listen(PORT, () => {
+    app.listen(PORT,"0.0.0.0",() => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
   } catch (err) {
