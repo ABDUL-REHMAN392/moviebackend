@@ -1,9 +1,11 @@
 // routes/favorite.routes.js
 import express from 'express';
-import {
-  addToFavorites
-} from '../controllers/favorite.controllers.js';
+
 import { authenticate } from '../middlewares/auth.middlewares.js';
+import {
+  addToFavorites,
+  removeFromFavorites,
+} from '../controllers/favorite.controllers.js';
 
 const router = express.Router();
 
@@ -11,6 +13,10 @@ const router = express.Router();
 
 // Add to favorites
 router.post('/add', authenticate, addToFavorites);
+
+// Remove from favorites
+router.delete('/remove/:tmdbId/:mediaType', authenticate, removeFromFavorites);
+
 
 
 

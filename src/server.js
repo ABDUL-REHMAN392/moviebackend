@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import passport from './config/passport.configs.js';
 import userRoutes from './routes/auth.routes.js';
+import favoriteRoutes from './routes/favorite.routes.js';
 import { mongoConnection } from './config/mongo.configs.js';
 import fs from 'fs';
 dotenv.config();
@@ -29,8 +30,8 @@ if (!fs.existsSync('uploads')) {
 
 // ============= ROUTES =============
 app.use('/api/auth', userRoutes);
-//testing route
-app.get('/ping', (req, res) => res.json({ message: 'pong' }));
+app.use('/api/favorites', favoriteRoutes);
+
 // ============= DATABASE CONNECTION =============
 // Connect DB and Start Server
 (async () => {

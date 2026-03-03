@@ -111,3 +111,45 @@ export const addToFavorites = async (req, res) => {
   }
 };
 
+
+// ============= REMOVE FROM FAVORITES =============
+export const removeFromFavorites = async (req, res) => {
+  try {
+    const { tmdbId, mediaType } = req.params;
+    const userId = req.user.id;
+
+    // Validation
+    if (!['movie', 'tv'].includes(mediaType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid media type'
+      });
+    }
+
+    const result = await Favorite.findOneAndDelete({
+      userId,
+      tmdbId: parseInt(tmdbId),
+      mediaType
+    });
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Favorite not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Removed from favorites successfully'
+    });
+
+  } catch (error) {
+    console.error('Remove from favorites error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove from favorites',
+      error: error.message
+    });
+  }
+};
