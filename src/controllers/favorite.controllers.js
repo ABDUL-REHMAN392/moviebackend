@@ -222,3 +222,34 @@ export const checkFavorite = async (req, res) => {
     });
   }
 };
+
+// ============= GET FAVORITES COUNT =============
+export const getFavoritesCount = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [movieCount, tvCount, total] = await Promise.all([
+      Favorite.countDocuments({ userId, mediaType: 'movie' }),
+      Favorite.countDocuments({ userId, mediaType: 'tv' }),
+      Favorite.countDocuments({ userId })
+    ]);
+
+    res.status(200).json({
+      success: true,
+      counts: {
+        movies: movieCount,
+        tvShows: tvCount,
+        total
+      }
+    });
+
+  } catch (error) {
+    console.error('Get favorites count error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get favorites count',
+      error: error.message
+    });
+  }
+};
+

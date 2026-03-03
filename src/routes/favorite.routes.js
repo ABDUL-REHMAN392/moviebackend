@@ -6,7 +6,8 @@ import {
   addToFavorites,
   removeFromFavorites,
   getAllFavorites,
-  checkFavorite
+  checkFavorite,
+  getFavoritesCount
 } from '../controllers/favorite.controllers.js';
 
 const router = express.Router();
@@ -24,6 +25,10 @@ router.get('/', authenticate, getAllFavorites);
 
 // Check if item is favorited
 router.get('/check/:tmdbId/:mediaType', authenticate, checkFavorite);
+
+// Get favorites count
+router.get('/count', authenticate, getFavoritesCount);
+
 
 
 
