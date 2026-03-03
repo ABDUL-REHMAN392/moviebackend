@@ -111,7 +111,6 @@ export const addToFavorites = async (req, res) => {
   }
 };
 
-
 // ============= REMOVE FROM FAVORITES =============
 export const removeFromFavorites = async (req, res) => {
   try {
@@ -149,6 +148,49 @@ export const removeFromFavorites = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to remove from favorites',
+      error: error.message
+    });
+  }
+};
+
+// ============= GET ALL FAVORITES =============
+export const getAllFavorites = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { mediaType, page = 1, limit = 20 } = req.query;
+
+    // Build query
+    const query = { userId };
+    if (mediaType && ['movie', 'tv'].includes(mediaType)) {
+      query.mediaType = mediaType;
+    }
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [favorites, total] = await Promise.all([
+      Favorite.find(query)
+        .sort({ createdAt: -1 }) // Latest first
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Favorite.countDocuments(query)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      count: favorites.length,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+      favorites
+    });
+
+  } catch (error) {
+    console.error('Get favorites error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch favorites',
       error: error.message
     });
   }

@@ -5,6 +5,7 @@ import { authenticate } from '../middlewares/auth.middlewares.js';
 import {
   addToFavorites,
   removeFromFavorites,
+  getAllFavorites
 } from '../controllers/favorite.controllers.js';
 
 const router = express.Router();
@@ -16,6 +17,9 @@ router.post('/add', authenticate, addToFavorites);
 
 // Remove from favorites
 router.delete('/remove/:tmdbId/:mediaType', authenticate, removeFromFavorites);
+
+// Get all favorites (with optional filtering & pagination)
+router.get('/', authenticate, getAllFavorites);
 
 
 
