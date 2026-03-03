@@ -195,3 +195,30 @@ export const getAllFavorites = async (req, res) => {
     });
   }
 };
+
+// ============= CHECK IF FAVORITED =============
+export const checkFavorite = async (req, res) => {
+  try {
+    const { tmdbId, mediaType } = req.params;
+    const userId = req.user.id;
+
+    const favorite = await Favorite.findOne({
+      userId,
+      tmdbId: parseInt(tmdbId),
+      mediaType
+    });
+
+    res.status(200).json({
+      success: true,
+      isFavorited: !!favorite
+    });
+
+  } catch (error) {
+    console.error('Check favorite error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check favorite status',
+      error: error.message
+    });
+  }
+};
