@@ -253,3 +253,25 @@ export const getFavoritesCount = async (req, res) => {
   }
 };
 
+// ============= CLEAR ALL FAVORITES =============
+export const clearAllFavorites = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await Favorite.deleteMany({ userId });
+
+    res.status(200).json({
+      success: true,
+      message: `Removed ${result.deletedCount} favorites`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Clear favorites error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to clear favorites',
+      error: error.message
+    });
+  }
+};

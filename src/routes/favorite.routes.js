@@ -7,7 +7,8 @@ import {
   removeFromFavorites,
   getAllFavorites,
   checkFavorite,
-  getFavoritesCount
+  getFavoritesCount,
+  clearAllFavorites
 } from '../controllers/favorite.controllers.js';
 
 const router = express.Router();
@@ -28,6 +29,10 @@ router.get('/check/:tmdbId/:mediaType', authenticate, checkFavorite);
 
 // Get favorites count
 router.get('/count', authenticate, getFavoritesCount);
+
+// Clear all favorites
+router.delete('/clear', authenticate, clearAllFavorites);
+
 
 
 
