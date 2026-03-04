@@ -7,51 +7,53 @@ import userRoutes from './routes/auth.routes.js';
 import favoriteRoutes from './routes/favorite.routes.js';
 import { mongoConnection } from './config/mongo.configs.js';
 import fs from 'fs';
+
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT||8080;
-// ============= MIDDLEWARES =============
+const PORT = process.env.PORT || 8080;
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true
+origin: process.env.CLIENT_URL,
+credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Passport initialization
 app.use(passport.initialize());
 
-// Create uploads folder if it doesn't exist
 if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
+fs.mkdirSync('uploads');
 }
 
-// ============= ROUTES =============
+// Health Check Route for Railway
+app.get("/", (req, res) => {
+res.status(200).send("✅ Backend is LIVE!");
+});
+
 app.use('/api/auth', userRoutes);
 app.use('/api/favorites', favoriteRoutes);
 
-// ============= DATABASE CONNECTION =============
-// Connect DB and Start Server
-(async () => {
-  try {
-    await mongoConnection();
-    app.listen(PORT,"0.0.0.0",() => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  } catch (err) {
-    console.error('Failed to start server:', err);
-  }
-})();
+// Fix: Listen first, Connect DB later
+app.listen(PORT, "0.0.0.0", () => {
+console.log(`🚀 Server is listening on port ${PORT}`);
 
-// ============= ERROR HANDLING =============
+mongoConnection()
+.then(() => {
+console.log('✅ MongoDB connected successfully');
+})
+.catch((err) => {
+console.error('❌ MongoDB Connection Error:', err.message);
+});
+});
+
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: err.message || 'Internal Server Error'
-  });
+console.error(err.stack);
+res.status(500).json({
+success: false,
+message: err.message || 'Internal Server Error'
+});
 });
 
 export default app;
