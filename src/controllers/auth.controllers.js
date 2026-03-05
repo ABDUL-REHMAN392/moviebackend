@@ -1,4 +1,5 @@
 import { User } from "../models/users.models.js";
+import { Favorite } from '../models/favorite.models.js'; 
 import jwt from "jsonwebtoken";
 import cloudinary from '../config/cloudinary.configs.js'; // Cloudinary configuration file
 import fs from 'fs';
@@ -534,31 +535,41 @@ export const deleteUserAccount = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User nahi mila'
+        message: 'User not found'
       });
     }
 
-    // Cloudinary se profile picture delete karo
+    // ✅ 1. Delete all user's favorites
+    await Favorite.deleteMany({ userId });
+
+    // ✅ 2. Delete profile picture from Cloudinary
     if (user.profilePicture.publicId) {
-      await cloudinary.uploader.destroy(user.profilePicture.publicId);
+      try {
+        await cloudinary.uploader.destroy(user.profilePicture.publicId);
+        console.log('✅ Profile picture deleted from Cloudinary');
+      } catch (cloudinaryError) {
+        console.error('⚠️ Cloudinary deletion failed:', cloudinaryError);
+        // Continue anyway - don't fail account deletion if Cloudinary fails
+      }
     }
 
-    // User delete karo
+    // ✅ 3. Delete user account
     await User.findByIdAndDelete(userId);
 
-    // Clear cookies
+    // ✅ 4. Clear all cookies
+    res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
 
     res.status(200).json({
       success: true,
-      message: 'Account successfully deleted'
+      message: 'Account successfully deleted',
     });
 
   } catch (error) {
     console.error('Delete account error:', error);
     res.status(500).json({
       success: false,
-      message: 'Account delete failed',
+      message: 'Account deletion failed',
       error: error.message
     });
   }
