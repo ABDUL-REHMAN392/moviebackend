@@ -3,7 +3,6 @@ import {
   registerUser,
   loginUser,
   googleAuthCallback,
-  refreshAccessToken,
   getUserProfile,
   updateUserProfile,
   updateProfilePicture,
@@ -36,8 +35,6 @@ router.get(
   }),
   googleAuthCallback,
 );
-// Refresh Token
-router.post('/refresh-token', refreshAccessToken);
 
 // ============= PROTECTED ROUTES =============
 // Profile Routes

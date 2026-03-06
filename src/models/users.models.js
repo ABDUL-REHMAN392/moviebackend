@@ -39,11 +39,7 @@ const userSchema = new Schema(
       type: String,
       enum: ['local', 'google'],
       default: 'local'
-    },
-    refreshToken: {
-      type: String,
-      select: false
-    },
+    }, 
     lastLogin: {
       type: Date,
       default: Date.now
@@ -72,7 +68,6 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
 userSchema.methods.toJSON = function() {
   const userObject = this.toObject();
   delete userObject.password;
-  delete userObject.refreshToken;
   return userObject;
 };
 

@@ -1,30 +1,21 @@
 import { User } from "../models/users.models.js";
-import { Favorite } from '../models/favorite.models.js'; 
+import { Favorite } from "../models/favorite.models.js";
 import jwt from "jsonwebtoken";
-import cloudinary from '../config/cloudinary.configs.js'; // Cloudinary configuration file
-import fs from 'fs';
+import cloudinary from "../config/cloudinary.configs.js";
+import fs from "fs";
+
 // ============= JWT TOKEN GENERATION =============
 const generateAccessToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_ACCESS_SECRET,
-    { expiresIn: "15m" }, // 15 minutes
-  );
-};
-const generateRefreshToken = (userId) => {
-  return jwt.sign(
-    { id: userId },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: "7d" }, // 7 days
-  );
+  return jwt.sign({ id: userId }, process.env.JWT_ACCESS_SECRET, {
+    expiresIn: "7d",
+  });
 };
 
-// ============= USER REGISTRATION (Email/Password) =============
+// ============= USER REGISTRATION =============
 export const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    // Validation
     if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
@@ -32,7 +23,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
@@ -41,7 +31,6 @@ export const registerUser = async (req, res) => {
       });
     }
 
-    // Create new user
     const user = await User.create({
       name,
       email,
@@ -49,22 +38,9 @@ export const registerUser = async (req, res) => {
       authProvider: "local",
     });
 
-    // Generate tokens
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
 
-    // Save refresh token in database
-    user.refreshToken = refreshToken;
-    await user.save();
-
-    // Set refresh token in HTTP-only cookie
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
@@ -87,12 +63,11 @@ export const registerUser = async (req, res) => {
   }
 };
 
-// ============= USER LOGIN (Email/Password) =============
+// ============= USER LOGIN =============
 export const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validation
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -100,7 +75,6 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Find user with password field (by default select: false hai)
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
@@ -110,16 +84,13 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Check if user registered with Google
-    if (user.authProvider === 'google') {
+    if (user.authProvider === "google") {
       return res.status(400).json({
         success: false,
-        message: 'Use Google login for this email address'
+        message: "Use Google login for this email address",
       });
     }
 
-
-    // Compare password
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       return res.status(401).json({
@@ -128,27 +99,16 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    // Generate tokens
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
 
-    // Update refresh token and last login
-    user.refreshToken = refreshToken;
     user.lastLogin = Date.now();
     await user.save();
 
-    // Set cookie
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-    res.cookie("refreshToken", refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     res.status(200).json({
@@ -173,101 +133,48 @@ export const googleAuthCallback = async (req, res) => {
     const user = req.user;
 
     const accessToken = generateAccessToken(user._id);
-    const refreshToken = generateRefreshToken(user._id);
 
-    user.refreshToken = refreshToken;
     user.lastLogin = Date.now();
     await user.save();
-    res.cookie('accessToken', accessToken, {
+
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000 // 15 minutes
-    });
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, ''); // trailing slash remove
-    const redirectUrl = `${clientUrl}/auth/success?token=${accessToken}`;
-    res.redirect(redirectUrl);
-
+    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, "");
+    res.redirect(`${clientUrl}/auth/success?token=${accessToken}`);
   } catch (error) {
-    console.error('Google auth error:', error);
-    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, '');
+    console.error("Google auth error:", error);
+    const clientUrl = process.env.CLIENT_URL.replace(/\/$/, "");
     res.redirect(`${clientUrl}/auth/failure`);
-  }
-};
-
-// ============= REFRESH ACCESS TOKEN =============
-export const refreshAccessToken = async (req, res) => {
-  try {
-    const { refreshToken } = req.cookies;
-
-    if (!refreshToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Refresh token was not received'
-      });
-    }
-
-    // Verify refresh token
-    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
-
-    // Find user
-    const user = await User.findById(decoded.id).select('+refreshToken');
-    
-    if (!user || user.refreshToken !== refreshToken) {
-      return res.status(403).json({
-        success: false,
-        message: 'Invalid refresh token'
-      });
-    }
-
-    // Generate new access token
-    const newAccessToken = generateAccessToken(user._id);
-
-    res.status(200).json({
-      success: true,
-      accessToken: newAccessToken
-    });
-
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    res.status(403).json({
-      success: false,
-      message: 'Invalid or expired refresh token'
-    });
   }
 };
 
 // ============= GET USER PROFILE =============
 export const getUserProfile = async (req, res) => {
   try {
-    // req.user will be available through middleware (after authentication)
     const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: "User not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      user
+      user,
     });
-
   } catch (error) {
-    console.error('Get profile error:', error);
+    console.error("Get profile error:", error);
     res.status(500).json({
       success: false,
-      message: 'Profile fetch failed',
-      error: error.message
+      message: "Profile fetch failed",
+      error: error.message,
     });
   }
 };
@@ -278,210 +185,176 @@ export const updateUserProfile = async (req, res) => {
     const { name, email } = req.body;
     const userId = req.user.id;
 
-    // ✅ 1. Check if at least one field is provided
     if (!name && !email) {
       return res.status(400).json({
         success: false,
-        message: 'At least one field (name or email) is required for update'
+        message: "At least one field (name or email) is required for update",
       });
     }
 
-    // ✅ 2. Validate name (if provided)
     if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Name must be a valid string and cannot be empty'
-        });
+      if (typeof name !== "string" || name.trim().length === 0) {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Name must be a valid string and cannot be empty",
+          });
       }
       if (name.trim().length < 2) {
-        return res.status(400).json({
-          success: false,
-          message: 'Name must be at least 2 characters long'
-        });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Name must be at least 2 characters long",
+          });
       }
       if (name.trim().length > 50) {
-        return res.status(400).json({
-          success: false,
-          message: 'Name cannot exceed 50 characters'
-        });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Name cannot exceed 50 characters",
+          });
       }
     }
 
-    // ✅ 3. Validate email (if provided)
     if (email !== undefined) {
-      if (typeof email !== 'string' || email.trim().length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email must be a valid string'
-        });
+      if (typeof email !== "string" || email.trim().length === 0) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email must be a valid string" });
       }
-      
-      // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid email format'
-        });
+        return res
+          .status(400)
+          .json({ success: false, message: "Invalid email format" });
       }
     }
 
-    // ✅ 4. Find user
     const user = await User.findById(userId);
-    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    // ✅ 5. Check if user is trying to update email with Google account
-    if (user.authProvider === 'google' && email && email !== user.email) {
+    if (user.authProvider === "google" && email && email !== user.email) {
       return res.status(403).json({
         success: false,
-        message: 'Cannot change email for Google authenticated accounts'
+        message: "Cannot change email for Google authenticated accounts",
       });
     }
 
-    // ✅ 6. Track what's being updated
     const updates = {};
 
-    // Update name
     if (name && name.trim() !== user.name) {
       user.name = name.trim();
       updates.name = true;
     }
-    
-    // Update email with duplicate check
+
     if (email && email.trim().toLowerCase() !== user.email) {
-      const existingUser = await User.findOne({ 
-        email: email.trim().toLowerCase() 
+      const existingUser = await User.findOne({
+        email: email.trim().toLowerCase(),
       });
-      
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'This email is already associated with another account'
+          message: "This email is already associated with another account",
         });
       }
-      
       user.email = email.trim().toLowerCase();
       updates.email = true;
     }
 
-    // ✅ 7. Check if anything actually changed
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'No changes detected. Provided values are same as current values.'
+        message:
+          "No changes detected. Provided values are same as current values.",
       });
     }
 
-    // ✅ 8. Save updated user
     await user.save();
 
-    // ✅ 9. Success response with updated fields info
     res.status(200).json({
       success: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       updatedFields: Object.keys(updates),
-      user
+      user,
     });
-
   } catch (error) {
-    console.error('Update profile error:', error);
-    
-    // ✅ Handle specific Mongoose errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
+    console.error("Update profile error:", error);
+    if (error.name === "ValidationError") {
       return res.status(400).json({
         success: false,
-        message: 'Validation failed',
-        errors
+        message: "Validation failed",
+        errors: Object.values(error.errors).map((err) => err.message),
       });
     }
-
-    if (error.name === 'CastError') {
-      return res.status(400).json({
+    res
+      .status(500)
+      .json({
         success: false,
-        message: 'Invalid user ID format'
+        message: "Profile update failed",
+        error: error.message,
       });
-    }
-
-    // Generic error
-    res.status(500).json({
-      success: false,
-      message: 'Profile update failed',
-      error: error.message
-    });
   }
 };
-// ============= UPDATE PROFILE PICTURE (Cloudinary) =============
+
+// ============= UPDATE PROFILE PICTURE =============
 export const updateProfilePicture = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Check if file uploaded hai
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Profile picture upload karein'
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Profile picture upload karein" });
     }
 
     const user = await User.findById(userId);
-    
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User nahi mila'
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User nahi mila" });
     }
 
-    //If there is an old profile picture, delete it (unless it’s the default)
     if (user.profilePicture.publicId) {
       await cloudinary.uploader.destroy(user.profilePicture.publicId);
     }
 
-    // Upload new image to Cloudinary
     const result = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'user-profiles',
+      folder: "user-profiles",
       transformation: [
-        { width: 400, height: 400, crop: 'fill', gravity: 'face' },
-        { quality: 'auto' }
-      ]
+        { width: 400, height: 400, crop: "fill", gravity: "face" },
+        { quality: "auto" },
+      ],
     });
 
-    // Update user profile picture
     user.profilePicture = {
       publicId: result.public_id,
-      url: result.secure_url
+      url: result.secure_url,
     };
-
     await user.save();
-
-    // Delete local file after upload
     fs.unlinkSync(req.file.path);
 
     res.status(200).json({
       success: true,
-      message: 'Profile picture updated successfully',
-      profilePicture: user.profilePicture
+      message: "Profile picture updated successfully",
+      profilePicture: user.profilePicture,
     });
-
   } catch (error) {
-    console.error('Update profile picture error:', error);
-    // Cleanup: delete local file if exists
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    res.status(500).json({
-      success: false,
-      message: 'Profile picture update failed',
-      error: error.message
-    });
+    console.error("Update profile picture error:", error);
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Profile picture update failed",
+        error: error.message,
+      });
   }
 };
 
@@ -492,37 +365,34 @@ export const deleteProfilePicture = async (req, res) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User nahi mila'
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User nahi mila" });
     }
 
-    // Cloudinary se delete karo
     if (user.profilePicture.publicId) {
       await cloudinary.uploader.destroy(user.profilePicture.publicId);
     }
 
-    // Set to default
     user.profilePicture = {
       publicId: null,
-      url: 'https://res.cloudinary.com/default/image/upload/v1234567890/default-avatar.png'
+      url: "https://www.gravatar.com/avatar/?d=mp&f=y",
     };
 
     await user.save();
 
-    res.status(200).json({
-      success: true,
-      message: 'Profile picture deleted successfully'
-    });
-
+    res
+      .status(200)
+      .json({ success: true, message: "Profile picture deleted successfully" });
   } catch (error) {
-    console.error('Delete profile picture error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Profile picture delete failed',
-      error: error.message
-    });
+    console.error("Delete profile picture error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Profile picture delete failed",
+        error: error.message,
+      });
   }
 };
 
@@ -533,71 +403,50 @@ export const deleteUserAccount = async (req, res) => {
     const user = await User.findById(userId);
 
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
     }
 
-    // ✅ 1. Delete all user's favorites
     await Favorite.deleteMany({ userId });
 
-    // ✅ 2. Delete profile picture from Cloudinary
     if (user.profilePicture.publicId) {
       try {
         await cloudinary.uploader.destroy(user.profilePicture.publicId);
-        console.log('✅ Profile picture deleted from Cloudinary');
       } catch (cloudinaryError) {
-        console.error('⚠️ Cloudinary deletion failed:', cloudinaryError);
-        // Continue anyway - don't fail account deletion if Cloudinary fails
+        console.error("⚠️ Cloudinary deletion failed:", cloudinaryError);
       }
     }
 
-    // ✅ 3. Delete user account
     await User.findByIdAndDelete(userId);
 
-    // ✅ 4. Clear all cookies
-    res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
+    res.clearCookie("accessToken");
 
-    res.status(200).json({
-      success: true,
-      message: 'Account successfully deleted',
-    });
-
+    res
+      .status(200)
+      .json({ success: true, message: "Account successfully deleted" });
   } catch (error) {
-    console.error('Delete account error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Account deletion failed',
-      error: error.message
-    });
+    console.error("Delete account error:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Account deletion failed",
+        error: error.message,
+      });
   }
 };
 
 // ============= LOGOUT =============
 export const logoutUser = async (req, res) => {
   try {
-    const userId = req.user.id;
+    res.clearCookie("accessToken");
 
-    // Remove refresh token from database
-    await User.findByIdAndUpdate(userId, { refreshToken: null });
-
-    // Clear cookie
-     res.clearCookie('accessToken');
-    res.clearCookie('refreshToken');
-
-    res.status(200).json({
-      success: true,
-      message: 'Logout successful'
-    });
-
+    res.status(200).json({ success: true, message: "Logout successful" });
   } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Logout failed',
-      error: error.message
-    });
+    console.error("Logout error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Logout failed", error: error.message });
   }
 };
