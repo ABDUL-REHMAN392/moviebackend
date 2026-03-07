@@ -1,4 +1,3 @@
-
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -8,15 +7,26 @@ import userRoutes from './routes/auth.routes.js';
 import favoriteRoutes from './routes/favorite.routes.js';
 import { mongoConnection } from './config/mongo.configs.js';
 import fs from 'fs';
+
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT||8080;
+const PORT = process.env.PORT || 8080;
+
 // ============= MIDDLEWARES =============
+
+// ✅ FIX: Remove trailing slash
+const clientUrl = (process.env.CLIENT_URL || 'https://moviebox-stream.netlify.app').replace(/\/$/, '');
+
+console.log('✅ CORS Origin:', clientUrl); // Debug log
+
 app.use(cors({
-  origin: process.env.CLIENT_URL,
-  credentials: true
+  origin: clientUrl,  // ⬅️ No trailing slash
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -34,12 +44,12 @@ app.use('/api/auth', userRoutes);
 app.use('/api/favorites', favoriteRoutes);
 
 // ============= DATABASE CONNECTION =============
-// Connect DB and Start Server
 (async () => {
   try {
     await mongoConnection();
-    app.listen(PORT,"0.0.0.0",() => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`✅ CORS enabled for: ${clientUrl}`);
     });
   } catch (err) {
     console.error('Failed to start server:', err);
